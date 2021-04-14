@@ -1,0 +1,116 @@
+{
+  "version": "1.0",
+  "package": {
+    "name": "Read",
+    "version": "1.0.0",
+    "description": "Reads a 3-dimensional Image or Array of Strings from Shared Memory",
+    "author": "Your-name-here",
+    "image": "svg-image-path-here"
+  },
+  "design": {
+    "board": "Python3-Noetic",
+    "graph": {
+      "blocks": 
+   [
+
+        {
+          "id": "Inp-0",
+          "type": "basic.input",
+          "data": {
+            "name": "",
+            "pins": [
+              {
+                "index": "0",
+                "name": "",
+                "value": "0"
+              }
+            ],
+            "virtual": true
+          },
+          "position": {
+            "x": 64,
+            "y": 144
+          }
+        },
+
+        {
+          "id": "Inp-1",
+          "type": "basic.input",
+          "data": {
+            "name": "E",
+            "pins": [
+              {
+                "index": "0",
+                "name": "",
+                "value": "0"
+              }
+            ],
+            "virtual": true
+          },
+          "position": {
+            "x": 64,
+            "y": 144
+          }
+        },
+
+
+        
+       {
+          "id": "300",
+          "type": "basic.code",
+          "data": {
+            "code": "#Your code here",
+            "params": [],
+            "ports": {
+              "in": [
+                {
+                  "name": "Inp-0"
+                }
+              ]
+            }
+          },
+          "position": {
+            "x": 50,
+            "y": 100
+          },
+          "size": {
+            "width": 800,
+            "height": 600
+          }
+        },
+
+        {
+          "id": "400",
+          "type": "basic.constant",
+          "data": {
+            "name": "Frequency", 
+            "value": "30.0",
+            "local": true
+          },
+          "position": {
+            "x": 400,
+            "y": 10
+          }
+        }
+
+   ],
+
+      "wires": 
+    [
+
+        {
+          "source": {
+            "block": "",
+            "port": ""
+          },
+          "target": {
+            "block": "",
+            "port": ""
+          }
+        }
+
+      ]
+    }
+  },
+  "dependencies": {}
+}

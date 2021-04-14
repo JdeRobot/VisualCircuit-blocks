@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "package": {
+    "name": "Write",
+    "version": "1.0.0",
+    "description": "Writes a 3-dimensional Image or Array of Strings to Shared Memory",
+    "author": "Your-name-here",
+    "image": "svg-image-here"
+  },
+  "design": {
+    "board": "Python3-Noetic",
+    "graph": {
+      "blocks": [
+
+        {
+          "id": "Inp-0",
+          "type": "basic.input",
+          "data": {
+            "name": "E",
+            "pins": [
+              {
+                "index": "0",
+                "name": "",
+                "value": "0"
+              }
+            ],
+            "virtual": true
+          },
+          "position": {
+            "x": 64,
+            "y": 144
+          }
+        },
+
+
+        {
+          "id": "Out-0",
+          "type": "basic.output",
+          "data": {
+            "name": "",
+            "pins": [
+              {
+                "index": "0",
+                "name": "",
+                "value": "0"
+              }
+            ],
+            "virtual": true
+          },
+          "position": {
+            "x": 752,
+            "y": 144
+          }
+        },
+        
+        {
+          "id": "300",
+          "type": "basic.code",
+          "data": {
+            "code": "",
+            "params": [],
+            "ports": {
+              "out": [
+                {
+                  "name": "Out-0"
+                }
+              ]
+            }
+          },
+          "position": {
+            "x": 50,
+            "y": 100
+          },
+          "size": {
+            "width": 800,
+            "height": 600
+          }
+        },
+        
+        {
+          "id": "400",
+          "type": "basic.constant",
+          "data": {
+            "name": "Frequency", 
+            "value": "10.0",
+            "local": true
+          },
+          "position": {
+            "x": 400,
+            "y": 10
+          }
+        }
+        
+      ],
+      "wires": [
+        {
+          "source": {
+            "block": "",
+            "port": ""
+          },
+          "target": {
+            "block": "Out-0",
+            "port": "out"
+          }
+        }
+      ]
+    }
+  },
+  "dependencies": {}
+}
