@@ -1,0 +1,733 @@
+{
+  "version": "1.2",
+  "package": {
+    "name": "",
+    "version": "",
+    "description": "",
+    "author": "",
+    "image": ""
+  },
+  "design": {
+    "board": "Python3-Noetic",
+    "graph": {
+      "blocks": [
+        {
+          "id": "3a227b7e-bb97-423d-b955-42d460cdd1af",
+          "type": "basic.constant",
+          "data": {
+            "name": "Frequency",
+            "value": "30.0",
+            "local": false
+          },
+          "position": {
+            "x": 96,
+            "y": -184
+          }
+        },
+        {
+          "id": "d38a4f42-7781-4173-9c3c-3d2173e45a42",
+          "type": "abd2278d22b123120431105828386b127ccf70e7",
+          "position": {
+            "x": -576,
+            "y": -56
+          },
+          "size": {
+            "width": 96,
+            "height": 64
+          }
+        },
+        {
+          "id": "d2b9931c-d3a3-4990-b505-3c90832fc7ae",
+          "type": "1a88b8e32f1b517749b7cd51079c16fc15a4cd1e",
+          "position": {
+            "x": -360,
+            "y": -56
+          },
+          "size": {
+            "width": 96,
+            "height": 64
+          }
+        },
+        {
+          "id": "a14f18a8-d6c1-47d8-8dd1-f2ea891de188",
+          "type": "de3b49f0b6ecf20ab1cb98f50b1c276a45149a94",
+          "position": {
+            "x": -144,
+            "y": -56
+          },
+          "size": {
+            "width": 96,
+            "height": 64
+          }
+        },
+        {
+          "id": "6fdf4ef4-2834-4747-b4a8-c6350942000b",
+          "type": "e07bb82dc454ef9ae670b49a726eb60b7a8e3e39",
+          "position": {
+            "x": -384,
+            "y": 136
+          },
+          "size": {
+            "width": 96,
+            "height": 64
+          }
+        },
+        {
+          "id": "14570fad-937a-4f55-894e-434f2e5871fe",
+          "type": "basic.code",
+          "data": {
+            "code": "import cv2\nimport numpy as np\nfrom time import sleep\nfrom utils.wires.wire_img import share_image, read_image\nfrom utils.wires.wire_str import read_string\nfrom utils.tools.freq_monitor import monitor_frequency\n\ndef average_slope_intercepts(lines):\n\tleft_lines = [] # (slope, intercept)\n\tleft_weights = [] # (length of line)\n\tright_lines = [] # (slope, intercept)\n\tright_weights = [] # (length of line)\n\n\tfor line in lines:\n\t\tfor x1,y1,x2,y2 in line:\n\t\t\tif x2 == x1 or y2 == y1: # ignoring vertical line\n\t\t\t\tcontinue\n\n\t\t\tslope = (y2-y1) / float((x2-x1))\n\t\t\tintercept = y1 - slope*x1\n\t\t\tlength_of_line = np.sqrt((y2-y1)**2 + (x2-x1)**2)\n\n\t\t\tif slope < 0:\n\t\t\t\tleft_lines.append((slope, intercept))\n\t\t\t\tleft_weights.append(length_of_line)\n\t\t\telse:\n\t\t\t\tright_lines.append((slope, intercept))\n\t\t\t\tright_weights.append(length_of_line)\n\n\n\tleft_lane  = np.dot(left_weights,  left_lines) /np.sum(left_weights)  if len(left_weights) >0 else None\n\tright_lane = np.dot(right_weights, right_lines)/np.sum(right_weights) if len(right_weights)>0 else None\n\t\n\treturn left_lane, right_lane\n\ndef convert_line_SI_points(y1, y2, line):\n\n\tif line is None:\n\t\treturn None\n\n\tslope, intercept = line\n\n\tx1 = int((y1 - intercept)/slope)\n\tx2 = int((y2 - intercept)/slope)\n\ty1 = int(y1)\n\ty2 = int(y2)\n\treturn (x1, y1, x2, y2)\n    \ndef lane_lines(img, lines):\n\tleft_lines, right_lines = average_slope_intercepts(lines)\n\n\ty1 = img.shape[0] # bottom of the image\n\ty2 = y1*0.6# slightly lower than the middle\n\n\tleft_lines = convert_line_SI_points(y1, y2, left_lines)\n\tright_lines = convert_line_SI_points(y1, y2, right_lines)\n\n\treturn left_lines, right_lines\n\n\ndef loop(block_name, input_wires, output_wires, parameters, flags):\n\n    input_0 = read_image(input_wires[0])\n    input_1 = read_image(input_wires[1])\n    output_0 = share_image(output_wires[0])\n\n    enabled = False\n    try:\n        enable_wire = read_string(input_wires[2])\n    except IndexError:\n        enabled = True\n    \n    required_frequency, update = float(parameters[0]), 1\n    control_data = np.array([0.0,0.03])\n    \n    if flags[0] == 1:\n        monitor_frequency(block_name, control_data, required_frequency, update)\n\n    try:\n        while True:\n        \n            if enabled or (update := bool(enable_wire.get()[0])):\n    \n                frame = input_0.get()\n                img = input_1.get()\n                \n                if frame is not None:\n\n                    # Write Program Logic Here\n                    \n                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)\n                    mask = np.zeros_like(frame)\n                    ignore_mask_color = 255\n                    vertices = np.array([[(0,frame.shape[0]),(480, 310), (485, 310), (frame.shape[1],frame.shape[0])]], dtype=np.int32)\n                    cv2.fillPoly(mask, vertices, ignore_mask_color)\n                    masked_edges = cv2.bitwise_and(frame, mask)\n            \n                    hough_lines = cv2.HoughLinesP(masked_edges, 2, (np.pi/180), 15, minLineLength=20, maxLineGap=15)\n            \n                    left_line, right_line = lane_lines(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), hough_lines)\n            \n                    if left_line is not None:\n                        x1,y1,x2,y2 = left_line\n                        cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)\n            \t\t\t\n                    if right_line is not None:\n                        x1,y1,x2,y2 = right_line\n                        cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)\n                    \n                    output_0.add(img)\n    \n                control_data[0] += 1\n                \n            sleep(control_data[1])\n            \n    except KeyboardInterrupt: \n    \n        input_0.release()\n        input_1.release()\n        enable_wire.release()\n        output_0.release()",
+            "params": [
+              {
+                "name": "Frequency"
+              }
+            ],
+            "ports": {
+              "in": [
+                {
+                  "name": "Lane"
+                },
+                {
+                  "name": "ObjDetect"
+                },
+                {
+                  "name": "Enable"
+                }
+              ],
+              "out": [
+                {
+                  "name": "Out"
+                }
+              ]
+            }
+          },
+          "position": {
+            "x": -160,
+            "y": 64
+          },
+          "size": {
+            "width": 600,
+            "height": 460
+          }
+        },
+        {
+          "id": "fbf815c3-24a6-44f4-b678-01bec7ee5c89",
+          "type": "basic.info",
+          "data": {
+            "info": "Some code to combine images\nand compute hough lines",
+            "readonly": false
+          },
+          "position": {
+            "x": 184,
+            "y": -72
+          },
+          "size": {
+            "width": 192,
+            "height": 128
+          }
+        },
+        {
+          "id": "83327906-c66c-48af-99a6-07084b8e8e98",
+          "type": "f14a715d3bef8425ca07a8ef318a206f4b55ac8a",
+          "position": {
+            "x": 592,
+            "y": 280
+          },
+          "size": {
+            "width": 96,
+            "height": 64
+          }
+        }
+      ],
+      "wires": [
+        {
+          "source": {
+            "block": "d38a4f42-7781-4173-9c3c-3d2173e45a42",
+            "port": "Out-0"
+          },
+          "target": {
+            "block": "d2b9931c-d3a3-4990-b505-3c90832fc7ae",
+            "port": "Inp-0"
+          }
+        },
+        {
+          "source": {
+            "block": "d2b9931c-d3a3-4990-b505-3c90832fc7ae",
+            "port": "Out-0"
+          },
+          "target": {
+            "block": "a14f18a8-d6c1-47d8-8dd1-f2ea891de188",
+            "port": "Inp-0"
+          }
+        },
+        {
+          "source": {
+            "block": "d38a4f42-7781-4173-9c3c-3d2173e45a42",
+            "port": "Out-0"
+          },
+          "target": {
+            "block": "6fdf4ef4-2834-4747-b4a8-c6350942000b",
+            "port": "100"
+          }
+        },
+        {
+          "source": {
+            "block": "3a227b7e-bb97-423d-b955-42d460cdd1af",
+            "port": "constant-out"
+          },
+          "target": {
+            "block": "14570fad-937a-4f55-894e-434f2e5871fe",
+            "port": "Frequency"
+          }
+        },
+        {
+          "source": {
+            "block": "a14f18a8-d6c1-47d8-8dd1-f2ea891de188",
+            "port": "Out-0"
+          },
+          "target": {
+            "block": "14570fad-937a-4f55-894e-434f2e5871fe",
+            "port": "Lane"
+          }
+        },
+        {
+          "source": {
+            "block": "6fdf4ef4-2834-4747-b4a8-c6350942000b",
+            "port": "200"
+          },
+          "target": {
+            "block": "14570fad-937a-4f55-894e-434f2e5871fe",
+            "port": "ObjDetect"
+          }
+        },
+        {
+          "source": {
+            "block": "14570fad-937a-4f55-894e-434f2e5871fe",
+            "port": "Out"
+          },
+          "target": {
+            "block": "83327906-c66c-48af-99a6-07084b8e8e98",
+            "port": "Inp-0"
+          }
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "abd2278d22b123120431105828386b127ccf70e7": {
+      "package": {
+        "name": "VideoStreamer",
+        "version": "1.0.0",
+        "description": "Captures Video Stream from File",
+        "author": "Muhammad Taha Suhail",
+        "image": "%3Csvg%20height=%22512pt%22%20viewBox=%22-31%200%20512%20512%22%20width=%22512pt%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg%20fill-rule=%22evenodd%22%3E%3Cpath%20d=%22M440.59%20216.676v239.672c0%2025.109-20.543%2045.652-45.652%2045.652H74.613c-25.11%200-45.652-20.543-45.652-45.652V216.676zm0%200%22%20fill=%22#d0d7df%22/%3E%3Cpath%20d=%22M11.813%20157.477l17.148%2059.199L424.336%20102.14l-17.149-59.2c-6.988-24.117-32.433-38.132-56.55-31.144l-307.68%2089.129c-24.117%206.988-38.129%2032.433-31.145%2056.55zm0%200M28.96%20216.676h411.63v93.586H28.96zm0%200%22%20fill=%22#49aaee%22/%3E%3Cpath%20d=%22M293.922%20405.113l-43.926-25.36-43.93-25.362v101.445l43.93-25.363zm0%200%22%20fill=%22#fa5c66%22/%3E%3Cpath%20d=%22M440.59%20206.676H99.418l327.7-94.93a10.018%2010.018%200%200%200%205.976-4.781%209.989%209.989%200%200%200%20.847-7.606L416.793%2040.16C409.941%2016.516%20387.926%200%20363.253%200c-5.198%200-10.378.738-15.401%202.191L40.176%2091.321c-14.23%204.12-26.024%2013.581-33.215%2026.632-7.188%2013.05-8.875%2028.078-4.754%2042.305l16.754%2057.836v238.254C18.96%20487.035%2043.926%20512%2074.609%20512h120.164c5.524%200%2010-4.477%2010-10s-4.476-10-10-10H74.613c-19.66%200-35.652-15.992-35.652-35.652V320.262H430.589v136.086c0%2019.66-15.991%2035.652-35.651%2035.652H274.773c-5.52%200-10%204.477-10%2010s4.48%2010%2010%2010h120.165c30.687%200%2055.652-24.965%2055.652-55.652V216.676c0-5.524-4.477-10-10-10zm-176.332%2093.586l42.488-73.586h55.262l-42.485%2073.586zm-78.36%200l42.489-73.586h55.261l-42.484%2073.586zm-78.355%200l42.484-73.586h55.266l-42.488%2073.586zm37.18-129.457l-71.149-68.336%2053.309-15.442a9.92%209.92%200%200%200%201.312%201.543l71.149%2068.336-53.309%2015.442a9.951%209.951%200%200%200-1.312-1.543zm134-125.84L349.87%20113.3l-53.308%2015.441a9.742%209.742%200%200%200-1.313-1.543l-71.148-68.336%2053.308-15.441a9.92%209.92%200%200%200%201.313%201.543zM203.457%2066.77l71.148%2068.332-53.308%2015.445a9.742%209.742%200%200%200-1.313-1.543l-71.148-68.336%2053.309-15.441c.378.543.816%201.062%201.312%201.543zm149.961-45.368c3.21-.93%206.52-1.402%209.836-1.402%2015.824%200%2029.937%2010.578%2034.328%2025.727l14.367%2049.59-40.12%2011.62a10.165%2010.165%200%200%200-1.317-1.542l-71.145-68.333zM24.48%20127.602c4.61-8.372%2012.16-14.434%2021.262-17.07l5.875-1.704a10.17%2010.17%200%200%200%201.313%201.543l71.148%2068.336-88.293%2025.578-14.367-49.59c-2.637-9.097-1.547-18.718%203.062-27.093zm14.48%2099.074h87.974l-42.485%2073.586H38.961zm303.657%2073.586l42.485-73.586h45.488v73.586zm0%200%22/%3E%3Cpath%20d=%22M303.922%20405.113a9.997%209.997%200%200%200-5-8.66l-87.856-50.723a10.006%2010.006%200%200%200-10%200%209.997%209.997%200%200%200-5%208.66v101.446a9.995%209.995%200%200%200%205%208.656%209.983%209.983%200%200%200%2010%200l87.856-50.719a9.997%209.997%200%200%200%205-8.66zm-87.856%2033.403V371.71l57.856%2033.402zm0%200M234.773%20492c-5.507%200-10%204.492-10%2010s4.493%2010%2010%2010c5.512%200%2010-4.492%2010-10s-4.488-10-10-10zm0%200%22/%3E%3C/g%3E%3C/svg%3E"
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "Inp-0",
+              "type": "basic.input",
+              "data": {
+                "name": "E"
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "Out-0",
+              "type": "basic.output",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 752,
+                "y": 144
+              }
+            },
+            {
+              "id": "400",
+              "type": "basic.constant",
+              "data": {
+                "name": "Frequency",
+                "value": "30.0",
+                "local": true
+              },
+              "position": {
+                "x": 400,
+                "y": 10
+              }
+            },
+            {
+              "id": "401",
+              "type": "basic.constant",
+              "data": {
+                "name": "Path to File",
+                "value": "/home/taha/Desktop/lane/video2.mp4",
+                "local": true
+              },
+              "position": {
+                "x": 500,
+                "y": 10
+              }
+            },
+            {
+              "id": "300",
+              "type": "basic.code",
+              "data": {
+                "code": "import cv2\r\nimport numpy as np\r\nfrom time import sleep\r\nfrom utils.wires.wire_img import share_image\r\nfrom utils.wires.wire_str import read_string\r\nfrom utils.tools.freq_monitor import monitor_frequency\r\n\r\ndef loop(block_name, input_wires, output_wires, parameters, flags):\r\n\r\n    output_0 = share_image(output_wires[0])\r\n    path_to_file = parameters[1]\r\n\r\n    enabled = False\r\n    try:\r\n        enable_wire = read_string(input_wires[0])\r\n    except IndexError:\r\n        enabled = True\r\n\r\n    required_frequency, update = float(parameters[0]), 1\r\n    control_data = np.array([0.0,0.03])\r\n    \r\n    if flags[0] == 1:\r\n        monitor_frequency(block_name, control_data, required_frequency, update)\r\n\r\n    cap = cv2.VideoCapture(path_to_file)\r\n    \r\n    try:\r\n    \r\n        while (cap.isOpened()):\r\n    \r\n            if enabled or (update := bool(enable_wire.get()[0])):\r\n            \r\n                ret, frame = cap.read()\r\n\t           \r\n                if ret:\r\n                    output_0.add(frame)\r\n\r\n                else:\r\n                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)\r\n                \r\n                sleep(control_data[1])\r\n            \r\n                control_data[0] += 1\r\n                    \r\n    except KeyboardInterrupt:\r\n    \r\n        cap.release()\r\n        input_0.release()\r\n        output_0.release()",
+                "params": [],
+                "ports": {
+                  "out": [
+                    {
+                      "name": "Out-0"
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": 50,
+                "y": 100
+              },
+              "size": {
+                "width": 800,
+                "height": 600
+              }
+            }
+          ],
+          "wires": []
+        }
+      }
+    },
+    "1a88b8e32f1b517749b7cd51079c16fc15a4cd1e": {
+      "package": {
+        "name": "Blur",
+        "version": "1.0.0",
+        "description": "Blurs an Image",
+        "author": "Muhammad Taha Suhail",
+        "image": "%3Csvg%20height=%22512%22%20viewBox=%220%200%20256%20256%22%20width=%22512%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath%20d=%22M202.581%2053.857l-33.504-33.504H53.419v204.321h149.162z%22%20fill=%22#cecece%22/%3E%3Cpath%20d=%22M169.077%2020.353h-6.5l33.504%2033.504v170.817h6.5V53.857z%22%20fill=%22#e2e2e2%22/%3E%3Cpath%20d=%22M53.419%2020.353h6.5v204.321h-6.5z%22%20fill=%22#afafaf%22/%3E%3Cg%20fill=%22#f8af23%22%3E%3Cpath%20d=%22M73.16%20122.514h16.126v16.126H73.16zM103.672%20122.514h79.168v16.126h-79.168z%22/%3E%3C/g%3E%3Ccircle%20cx=%22128%22%20cy=%2259.592%22%20fill=%22#9e9e9e%22%20r=%2212.722%22/%3E%3Cpath%20d=%22M144.888%20100.585h-33.775V84.641c0-6.808%205.519-12.327%2012.327-12.327h9.122c6.808%200%2012.327%205.519%2012.327%2012.327v15.944z%22%20fill=%22#63bce7%22/%3E%3Cg%20fill=%22#3f3679%22%3E%3Cpath%20d=%22M27.323%20234.147H9.32a1.5%201.5%200%201%200%200%203h18.003a1.5%201.5%200%201%200%200-3zM246.68%20234.147h-18.003a1.5%201.5%200%201%200%200%203h18.003a1.5%201.5%200%201%200%200-3zM218.479%20234.147H37.521a1.5%201.5%200%201%200%200%203H218.48a1.5%201.5%200%201%200-.001-3zM9.32%20226.174H246.68a1.5%201.5%200%201%200%200-3h-42.599V53.856c0-.397-.158-.779-.439-1.061l-33.504-33.504a1.5%201.5%200%200%200-1.061-.439H53.419a1.5%201.5%200%200%200-1.5%201.5v202.821H9.32a1.5%201.5%200%201%200%200%203.001zm161.257-202.2l28.383%2028.383h-28.383zM54.919%2021.853h112.658v32.004a1.5%201.5%200%200%200%201.5%201.5h32.004v167.817H54.919z%22/%3E%3Cpath%20d=%22M89.286%20121.014H73.16a1.5%201.5%200%200%200-1.5%201.5v16.125a1.5%201.5%200%200%200%201.5%201.5h16.125a1.5%201.5%200%200%200%201.5-1.5v-16.125a1.5%201.5%200%200%200-1.499-1.5zm-1.5%2016.125H74.66v-13.125h13.125v13.125zM182.84%20121.014h-79.167a1.5%201.5%200%200%200-1.5%201.5v16.125a1.5%201.5%200%200%200%201.5%201.5h79.167a1.5%201.5%200%200%200%201.5-1.5v-16.125a1.5%201.5%200%200%200-1.5-1.5zm-1.5%2016.125h-76.167v-13.125h76.167zM111.112%20102.085h33.775a1.5%201.5%200%200%200%201.5-1.5V84.641c0-6.407-4.387-11.795-10.311-13.356%203.708-2.569%206.145-6.849%206.145-11.692%200-7.842-6.38-14.222-14.222-14.222s-14.222%206.38-14.222%2014.222c0%204.843%202.437%209.123%206.145%2011.692-5.924%201.561-10.311%206.948-10.311%2013.356v15.944c.001.828.673%201.5%201.501%201.5zm5.666-42.492c0-6.188%205.034-11.222%2011.222-11.222%206.187%200%2011.222%205.034%2011.222%2011.222S134.187%2070.814%20128%2070.814c-6.188%200-11.222-5.034-11.222-11.221zm-4.166%2025.048c0-5.97%204.857-10.826%2010.827-10.826h9.122c5.97%200%2010.827%204.856%2010.827%2010.826v14.444h-30.775V84.641z%22/%3E%3C/g%3E%3Cg%3E%3Cg%20fill=%22#afafaf%22%3E%3Cpath%20d=%22M59.919%20132.354h22.703v22.703H59.919zM105.269%20132.354h22.703v22.703h-22.703zM150.675%20132.354h22.703v22.703h-22.703z%22/%3E%3C/g%3E%3Cpath%20d=%22M82.622%20132.354h22.703v22.703H82.622zM127.972%20132.354h22.703v22.703h-22.703zM173.378%20132.354h22.703v22.703h-22.703z%22%20fill=%22#cecece%22/%3E%3C/g%3E%3Cg%3E%3Cg%20fill=%22#cecece%22%3E%3Cpath%20d=%22M59.919%20155.057h22.703v22.703H59.919zM105.269%20155.057h22.703v22.703h-22.703zM150.675%20155.057h22.703v22.703h-22.703z%22/%3E%3C/g%3E%3Cpath%20d=%22M82.622%20155.057h22.703v22.703H82.622zM127.972%20155.057h22.703v22.703h-22.703zM173.378%20155.057h22.703v22.703h-22.703z%22%20fill=%22#afafaf%22/%3E%3C/g%3E%3Cg%3E%3Cg%20fill=%22#afafaf%22%3E%3Cpath%20d=%22M59.919%20177.76h22.703v22.703H59.919zM105.269%20177.76h22.703v22.703h-22.703zM150.675%20177.76h22.703v22.703h-22.703z%22/%3E%3C/g%3E%3Cpath%20d=%22M82.622%20177.76h22.703v22.703H82.622zM127.972%20177.76h22.703v22.703h-22.703zM173.378%20177.76h22.703v22.703h-22.703z%22%20fill=%22#cecece%22/%3E%3C/g%3E%3Cg%3E%3Cg%20fill=%22#cecece%22%3E%3Cpath%20d=%22M59.919%20200.463h22.703v22.703H59.919zM105.269%20200.463h22.703v22.703h-22.703zM150.675%20200.463h22.703v22.703h-22.703z%22/%3E%3C/g%3E%3Cpath%20d=%22M82.622%20200.463h22.703v22.703H82.622zM127.972%20200.463h22.703v22.703h-22.703zM173.378%20200.463h22.703v22.703h-22.703z%22%20fill=%22#afafaf%22/%3E%3C/g%3E%3C/svg%3E"
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "Inp-0",
+              "type": "basic.input",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "Inp-1",
+              "type": "basic.input",
+              "data": {
+                "name": "E"
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "Out-0",
+              "type": "basic.output",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 752,
+                "y": 144
+              }
+            },
+            {
+              "id": "300",
+              "type": "basic.code",
+              "data": {
+                "code": "import cv2 as cv\nimport numpy as np\nfrom time import sleep\nfrom utils.wires.wire_img import share_image, read_image\nfrom utils.wires.wire_str import read_string\nfrom utils.tools.freq_monitor import monitor_frequency\n\ndef loop(block_name, input_wires, output_wires, parameters, flags):\n\n    input_0 = read_image(input_wires[0])\n    output_0 = share_image(output_wires[0])\n\n    # Blur Type\n    blur_type = parameters[1]\n    \n    # Kernel Size\n    kernel = tuple([int(x.strip()) for x in parameters[2].split(',')])\n\n    enabled = False\n    try:\n        enable_wire = read_string(input_wires[1])\n    except IndexError:\n        enabled = True\n    \n    required_frequency, update = float(parameters[0]), 1\n    control_data = np.array([0.0,0.03])\n    \n    if flags[0] == 1:\n        monitor_frequency(block_name, control_data, required_frequency, update)\n        \n    try:\n    \n        while True:\n        \n            if enabled or (update := bool(enable_wire.get()[0])):\n\n                frame = input_0.get()\n                \n                if frame is not None:\n\n                    if blur_type == 'Gaussian':\n                        blurred_img = cv.GaussianBlur(frame, kernel, 0)\n                        \n                    elif blur_type == 'Averaging':\n                        blurred_img = cv.medianBlur(frame, kernel[0])\n                        \n                    elif blur_type == 'Median':\n                        blurred_img = cv.blur(frame, kernel)\n                        \n                    output_0.add(blurred_img)\n                    control_data[0] += 1\n\n            sleep(control_data[1])\n            \n    except KeyboardInterrupt: \n    \n        input_0.release()\n        enable_wire.release()\n        output_0.release()\n",
+                "params": [],
+                "ports": {
+                  "in": [
+                    {
+                      "name": "Inp-0"
+                    }
+                  ],
+                  "out": [
+                    {
+                      "name": "Out-0"
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": 50,
+                "y": 100
+              },
+              "size": {
+                "width": 800,
+                "height": 600
+              }
+            },
+            {
+              "id": "400",
+              "type": "basic.constant",
+              "data": {
+                "name": "Frequency",
+                "value": "30.0",
+                "local": true
+              },
+              "position": {
+                "x": 300,
+                "y": 10
+              }
+            },
+            {
+              "id": "401",
+              "type": "basic.constant",
+              "data": {
+                "name": "Blur Type",
+                "value": "Gaussian",
+                "local": true
+              },
+              "position": {
+                "x": 400,
+                "y": 10
+              }
+            },
+            {
+              "id": "402",
+              "type": "basic.constant",
+              "data": {
+                "name": "Kernel",
+                "value": "5,5",
+                "local": true
+              },
+              "position": {
+                "x": 500,
+                "y": 10
+              }
+            }
+          ],
+          "wires": [
+            {
+              "source": {
+                "block": "",
+                "port": ""
+              },
+              "target": {
+                "block": "",
+                "port": ""
+              }
+            },
+            {
+              "source": {
+                "block": "",
+                "port": ""
+              },
+              "target": {
+                "block": "",
+                "port": ""
+              }
+            }
+          ]
+        }
+      }
+    },
+    "de3b49f0b6ecf20ab1cb98f50b1c276a45149a94": {
+      "package": {
+        "name": "EdgeDetector",
+        "version": "1.0.0",
+        "description": "Performs Edge Detection on Image",
+        "author": "Muhammad Taha Suhail",
+        "image": "%3Csvg%20height=%22512%22%20viewBox=%220%200%2056%2056%22%20width=%22512%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg%20fill=%22#000%22%20fill-rule=%22nonzero%22%3E%3Cpath%20d=%22M46.717%2043.4a208.107%20208.107%200%200%201-3.4-1.8%2012.694%2012.694%200%200%200-3.335-1.387A14.11%2014.11%200%200%201%2039.514%2044h8.448c-.2-.1-.4-.2-.586-.281-.237-.11-.462-.214-.659-.319zM5%2050h7v2H5zM19.057%2039.128c-.337.183-.683.347-1.037.493A8.617%208.617%200%200%200%2018.834%2044H37.4c.46-1.413.654-2.9.571-4.383-.353-.146-.699-.31-1.035-.493-.336-.18-.648-.368-.936-.553V41a1%201%200%200%201-2%200v-3.987C32.973%2038.564%2031.966%2040%2029.56%2040h-3.12c-2.406%200-3.413-1.436-4.44-2.987V41a1%201%200%200%201-2%200v-2.43c-.29.187-.6.377-.943.558z%22/%3E%3Cpath%20d=%22M55%200H1a1%201%200%200%200-1%201v22h11a1%201%200%200%201%200%202H0v30a1%201%200%200%200%201%201h54a1%201%200%200%200%201-1v-9H3a1%201%200%200%201%200-2h2.189a2.4%202.4%200%200%201%20.167-.343A5.222%205.222%200%200%201%207.788%2041.9c.205-.093.4-.182.568-.271a170.673%20170.673%200%200%200%203.365-1.785%2013.842%2013.842%200%200%201%204.325-1.7%206.912%206.912%200%200%200%202.058-.78c.666-.36%201.3-.777%201.896-1.246v-1.726c-.157-.165-.307-.33-.483-.5a7.959%207.959%200%200%201-2.733-6.866%206.945%206.945%200%200%201-3.637-4.592c-.3-2.115-.331-4.709%201.161-5.286a2.349%202.349%200%200%201%201.711.025%2059.65%2059.65%200%200%201%20.062-4.475c.342-7.313%207.408-9.545%2011.1-9.7h1.6c3.731.158%2010.8%202.39%2011.139%209.7.085%201.8.1%203.26.062%204.475a2.362%202.362%200%200%201%201.714-.024c1.489.576%201.455%203.17%201.164%205.244a6.943%206.943%200%200%201-3.643%204.633%207.959%207.959%200%200%201-2.734%206.874c-.176.165-.326.33-.483.5v1.726a13.28%2013.28%200%200%200%201.888%201.248c.644.37%201.343.636%202.071.785%201.529.319%202.993.894%204.33%201.7%201.1.6%202.226%201.2%203.352%201.779.172.09.366.179.571.272a5.215%205.215%200%200%201%202.433%201.759c.064.109.12.222.166.34H56V25H45a1%201%200%200%201%200-2h11V1a1%201%200%200%200-1-1zM27%2048h1a1%201%200%200%201%200%202h-1a1%201%200%200%201%200-2zm-10%200h6a1%201%200%200%201%200%202h-6a1%201%200%200%201%200-2zm0%204h4a1%201%200%200%201%200%202h-4a1%201%200%200%201%200-2zM3%2049a1%201%200%200%201%201-1h9a1%201%200%200%201%201%201v4a1%201%200%200%201-1%201H4a1%201%200%200%201-1-1z%22/%3E%3Cpath%20d=%22M12.691%2041.594c-1.133.62-2.272%201.219-3.411%201.81-.194.1-.419.2-.656.315-.184.084-.386.18-.586.281h8.619A10.666%2010.666%200%200%201%2016%2040.216c-1.163.3-2.277.765-3.309%201.378zM20.883%2032.437a17.383%2017.383%200%200%201%202.708%203.363C24.628%2037.363%2025.1%2038%2026.44%2038h3.12c1.337%200%201.812-.637%202.849-2.2a17.355%2017.355%200%200%201%202.709-3.358c2.254-2.108%202.172-3.873%202.068-6.107a31.642%2031.642%200%200%201-.046-1.5c.013-.96.121-1.916.323-2.854.56-3.027.713-6.115.458-9.182C37.58%205.489%2029.1%205.016%2028.735%205H27.22c-.316.016-8.8.489-9.141%207.8a34.689%2034.689%200%200%200%20.458%209.182c.202.938.31%201.894.323%202.854%200%20.51-.023%201.008-.046%201.5-.104%202.228-.186%203.993%202.069%206.101zM16.06%2019.569a1.758%201.758%200%200%200-.915-.569%208.722%208.722%200%200%200-.024%203.12%204.941%204.941%200%200%200%201.734%202.58c-.024-.792-.12-1.58-.285-2.355-.139-.755-.3-1.633-.416-2.852zM40.885%2022.08a8.657%208.657%200%200%200-.029-3.08%201.75%201.75%200%200%200-.916.567l-.094-.08a29.962%2029.962%200%200%201-.416%202.852c-.165.774-.26%201.562-.285%202.353a4.918%204.918%200%200%200%201.74-2.612z%22/%3E%3C/g%3E%3C/svg%3E"
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "Inp-0",
+              "type": "basic.input",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "Inp-1",
+              "type": "basic.input",
+              "data": {
+                "name": "E"
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "Out-0",
+              "type": "basic.output",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 752,
+                "y": 144
+              }
+            },
+            {
+              "id": "400",
+              "type": "basic.constant",
+              "data": {
+                "name": "Frequency",
+                "value": "30.0",
+                "local": true
+              },
+              "position": {
+                "x": 300,
+                "y": 10
+              }
+            },
+            {
+              "id": "401",
+              "type": "basic.constant",
+              "data": {
+                "name": "Lower Thresh",
+                "value": "50",
+                "local": true
+              },
+              "position": {
+                "x": 400,
+                "y": 10
+              }
+            },
+            {
+              "id": "402",
+              "type": "basic.constant",
+              "data": {
+                "name": "Upper Thresh",
+                "value": "150",
+                "local": true
+              },
+              "position": {
+                "x": 500,
+                "y": 10
+              }
+            },
+            {
+              "id": "300",
+              "type": "basic.code",
+              "data": {
+                "code": "import cv2 as cv\nimport numpy as np\nfrom time import sleep\nfrom utils.wires.wire_img import share_image, read_image\nfrom utils.wires.wire_str import read_string\nfrom utils.tools.freq_monitor import monitor_frequency\n\ndef loop(block_name, input_wires, output_wires, parameters, flags):\n\n    input_0 = read_image(input_wires[0])\n    output_0 = share_image(output_wires[0])\n\n    enabled = False\n    try:\n        enable_wire = read_string(input_wires[1])\n    except IndexError:\n        enabled = True\n\n    control_data = np.array([0.0,0.03])\n    required_frequency, update = float(parameters[0]), 1\n\n    if flags[0] == 1:\n        monitor_frequency(block_name, control_data, required_frequency, update)\n\n    try:\n        while True:\n        \n            if enabled or (update := int(enable_wire.get()[0])):\n    \n                sleep(control_data[1])\n                frame = input_0.get()\n                \n                if frame is not None:\n                \n                    frame = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)\n                    edge_img = cv.Canny(frame, int(parameters[1]), int(parameters[2]))\n                    edge_img = cv.cvtColor(edge_img, cv.COLOR_GRAY2BGR)\n    \n                    output_0.add(edge_img)\n                    control_data[0] += 1\n                    \n    except KeyboardInterrupt:\n    \n        input_0.release()\n        enable_wire.release()\n        output_0.release()",
+                "params": [],
+                "ports": {
+                  "in": [
+                    {
+                      "name": "Inp-0"
+                    }
+                  ],
+                  "out": [
+                    {
+                      "name": "Out-0"
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": 50,
+                "y": 100
+              },
+              "size": {
+                "width": 800,
+                "height": 600
+              }
+            }
+          ],
+          "wires": []
+        }
+      }
+    },
+    "e07bb82dc454ef9ae670b49a726eb60b7a8e3e39": {
+      "package": {
+        "name": "ObjectDetector",
+        "version": "1.0.0",
+        "description": "Detects Objects in an Image",
+        "author": "Faizan Ahmed",
+        "image": "%3Csvg%20height=%22512%22%20viewBox=%220%200%20510%20510%22%20width=%22512%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath%20d=%22M240%200v75.62l7.5%206.297L255%2075l3.673-36.106L255%200h-15z%22%20fill=%22#e63950%22/%3E%3Cpath%20d=%22M270%200h-15v75l7.5%206.916%207.5-6.297V0z%22%20fill=%22#cd0000%22/%3E%3Cpath%20d=%22M240%20434.378V510h15l5.833-35.333L255%20435l-7.5-7.667z%22%20fill=%22#e63950%22/%3E%3Cpath%20d=%22M270%20434.378l-7.5-7.045L255%20435v75h15v-75.622zM434.381%20270H510v-30h-75.619L420%20255z%22%20fill=%22#cd0000%22/%3E%3Cpath%20d=%22M75.622%20270H0v-30h75.621L90%20255z%22%20fill=%22#e63950%22/%3E%3Cpath%20d=%22M75%20255c0%2099.25%2080.745%20180%20180%20180l15-180-15-180c-99.25%200-180%2080.745-180%20180z%22%20fill=%22#ff637b%22/%3E%3Cpath%20d=%22M435%20255c0-99.249-80.745-180-180-180v360c99.249%200%20180-80.745%20180-180z%22%20fill=%22#e63950%22/%3E%3Cpath%20d=%22M105%20255c0%2082.707%2067.287%20150%20150%20150l15-150-15-150c-82.708%200-150%2067.287-150%20150z%22%20fill=%22#e6f2ff%22/%3E%3Cpath%20d=%22M405%20255c0-82.708-67.287-150-150-150v300c82.707%200%20150-67.288%20150-150zM480%2030v90h30V0H390v30z%22%20fill=%22#cdf%22/%3E%3Cpath%20d=%22M30%20120H0V0h120v30H30z%22%20fill=%22#e6f2ff%22/%3E%3Cpath%20d=%22M480%20480h-90v30h120V390h-30z%22%20fill=%22#cdf%22/%3E%3Cpath%20d=%22M120%20510H0V390h30v90h90z%22%20fill=%22#e6f2ff%22/%3E%3Cpath%20d=%22M213.677%20234.824c-14.505%207.206-24.746%2016.72-31.954%2026.202-14.379%2018.914-16.691%2037.698-16.723%2037.766V330h90l15-37.501-15-37.501z%22%20fill=%22#6cf%22/%3E%3Cpath%20d=%22M345%20298.792c-.103-.224-2.034-18.927-16.555-37.871-7.188-9.377-17.46-18.813-32.122-26.096L255%20254.998V330h90v-31.208z%22%20fill=%22#4596e6%22/%3E%3Cpath%20d=%22M202.5%20202.5c0%2028.948%2023.55%2052.5%2052.5%2052.5l15-52.5-15-52.5c-28.948%200-52.5%2023.55-52.5%2052.5z%22%20fill=%22#fdc%22/%3E%3Cpath%20d=%22M307.5%20202.5c0-28.947-23.55-52.5-52.5-52.5v105c28.947%200%2052.5-23.55%2052.5-52.5z%22%20fill=%22#ffbfb3%22/%3E%3C/svg%3E"
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "100",
+              "type": "basic.input",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "Inp-1",
+              "type": "basic.input",
+              "data": {
+                "name": "E"
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "200",
+              "type": "basic.output",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 752,
+                "y": 144
+              }
+            },
+            {
+              "id": "400",
+              "type": "basic.constant",
+              "data": {
+                "name": "Frequency",
+                "value": "15.0",
+                "local": true
+              },
+              "position": {
+                "x": 400,
+                "y": 10
+              }
+            },
+            {
+              "id": "300",
+              "type": "basic.code",
+              "data": {
+                "code": "import cv2\nimport time\nimport numpy as np\nfrom time import sleep\nfrom utils.wires.wire_img import share_image, read_image\nfrom utils.wires.wire_str import read_string\nfrom utils.tools.freq_monitor import monitor_frequency\n\nclassName = []\nclassesFile = 'resources/backend/utils/models/yolov3/yolov3.txt'\n\nwith open(classesFile,'rt') as f:\n        className = f.read().rstrip('\\n').split('\\n')\n\ndef findObjects(outputs, img):\n\n    confThreshold = 0.3\n    nmsThreshold = 0.3\n    hT, wT, cT = img.shape\n    bbox = []\n    classIds = []\n    confs = []\n\n    for output in outputs:\n    \n        for det in output:\n            scores = det[5:]\n            classId = np.argmax(scores)\n            confidence = scores[classId]\n            if confidence > confThreshold:\n                w,h = int(det[2] * wT), int(det[3] * hT)\n                x,y = int((det[0]*wT) - w/2), int((det[1]*hT) - h/2)\n                bbox.append([x,y,w,h])\n                classIds.append(classId)\n                confs.append(float(confidence))\n    \n    indices = cv2.dnn.NMSBoxes(bbox, confs, confThreshold, nmsThreshold)\n    for i in indices:\n        i = i[0]\n        box = bbox[i]\n        x,y,w,h = box[0],box[1],box[2],box[3]\n        cv2.rectangle(img,(x,y),(x+w, y+h),(255,0,255),2)\n        cv2.putText(img,f'{className[classIds[i]].upper()} {int(confs[i]*100)}%',\n                    (x,y-10),cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255),2)\n                \ndef loop(block_name, input_wires, output_wires, parameters, flags):\n\n    input_0 = read_image(input_wires[0])\n    output_0 = share_image(output_wires[0])\n\n    enabled = False\n    try:\n        enable_wire = read_string(input_wires[1])\n    except IndexError:\n        enabled = True\n    \n    required_frequency, update = float(parameters[0]), 1\n    control_data = np.array([0.0,0.03])\n    \n    if flags[0] == 1:\n        monitor_frequency(block_name, control_data, required_frequency, update)\n    \n    whT = 320\n\n    modelConfiguration = 'resources/backend/utils/models/yolov3/yolov3-tiny.cfg'\n    modelWeights = 'resources/backend/utils/models/yolov3/yolov3-tiny.weights'\n\n    net = cv2.dnn.readNetFromDarknet(modelConfiguration,modelWeights)\n    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)\n    net.setPreferableTarget(cv2.dnn. DNN_TARGET_CPU)\n\n    try:\n    \n        while True:\n        \n            if enabled or (update := bool(enable_wire.get()[0])):\n\n                frame = input_0.get()\n                \n                if frame is not None:    \n\n                    #converting img to blob\n                    blob = cv2.dnn.blobFromImage(frame, 1/255,(whT,whT),[0,0,0],1, crop = False)\n            \n                    #Passing blob to network\n                    net.setInput(blob)\n\n                    layerNames = net.getLayerNames()\n                    outputNames = [layerNames[i[0]-1] for i in net.getUnconnectedOutLayers()]\n            \n                    #forward Pass\n                    outputs = net.forward(outputNames)\n                    findObjects(outputs,frame)\n\n                    output_0.add(frame)\n                    control_data[0] += 1\n\n            sleep(control_data[1])\n            \n    except KeyboardInterrupt: \n    \n        input_0.release()\n        enable_wire.release()\n        output_0.release()",
+                "params": [],
+                "ports": {
+                  "in": [
+                    {
+                      "name": "Inp-0"
+                    }
+                  ],
+                  "out": [
+                    {
+                      "name": "Out-0"
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": 50,
+                "y": 100
+              },
+              "size": {
+                "width": 800,
+                "height": 600
+              }
+            }
+          ],
+          "wires": []
+        }
+      }
+    },
+    "f14a715d3bef8425ca07a8ef318a206f4b55ac8a": {
+      "package": {
+        "name": "Screen",
+        "version": "1.0.0",
+        "description": "Displays Image or Video",
+        "author": "Muhammad Taha Suhail",
+        "image": "%3Csvg%20height=%22512%22%20viewBox=%220%200%20512%20512%22%20width=%22512%22%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath%20d=%22M210.287%20405.667V497H256l20-48-20-43.333z%22%20fill=%22#b4d2d7%22/%3E%3Cpath%20d=%22M256%20405.667h45.713V497H256z%22%20fill=%22#9bb9c3%22/%3E%3Cpath%20d=%22M0%200v354.19l256%2020%2030-197.095L256%200z%22%20fill=%22#07485e%22/%3E%3Ccircle%20cx=%22150.416%22%20cy=%22202.98%22%20fill=%22#f2bb88%22%20r=%2249.341%22/%3E%3Cpath%20d=%22M222.885%20364.19H77.947v-91.869c0-11.046%208.954-20%2020-20h104.938c11.046%200%2020%208.954%2020%2020z%22%20fill=%22#00b6bd%22/%3E%3Cpath%20d=%22M512%200H256v374.19l256-20z%22%20fill=%22#04303e%22/%3E%3Cpath%20d=%22M0%20354.19v61.867h256L276%20380l-20-25.81z%22%20fill=%22#e1ebf0%22/%3E%3Cpath%20d=%22M256%20354.19h256v61.867H256z%22%20fill=%22#b4d2d7%22/%3E%3Cpath%20d=%22M256%20512H131.234v-30H256l10%2015z%22%20fill=%22#e1ebf0%22/%3E%3Cpath%20d=%22M256%20482h124.766v30H256z%22%20fill=%22#b4d2d7%22/%3E%3Cpath%20d=%22M289.115%2075h151v118h-151z%22%20fill=%22#5a93c8%22/%3E%3C/svg%3E"
+      },
+      "design": {
+        "graph": {
+          "blocks": [
+            {
+              "id": "Inp-0",
+              "type": "basic.input",
+              "data": {
+                "name": ""
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "Inp-1",
+              "type": "basic.input",
+              "data": {
+                "name": "E"
+              },
+              "position": {
+                "x": 64,
+                "y": 144
+              }
+            },
+            {
+              "id": "300",
+              "type": "basic.code",
+              "data": {
+                "code": "import cv2\nimport numpy as np\nfrom time import sleep\nfrom utils.wires.wire_img import read_image\nfrom utils.wires.wire_str import read_string\nfrom utils.tools.freq_monitor import monitor_frequency\n\ndef loop(block_name, input_wires, output_wires, parameters, flags):\n\n    input_0 = read_image(input_wires[0])\n\n    enabled = False\n    try:\n        enable_wire = read_string(input_wires[1])\n    except IndexError:\n        enabled = True\n\n    required_frequency, update = float(parameters[0]), 1\n    control_data = np.array([0.0,0.03])\n\n    if flags[0] == 1:\n        monitor_frequency(block_name, control_data, required_frequency, update)\n\n    try:\n    \n        while True:\n        \n            if enabled or (update := bool(enable_wire.get()[0])):\n        \n                control_data[0] += 1\n                img = input_0.get()\n                \n                if img is not None:\n                    cv2.imshow(block_name, img)\n                    if cv2.waitKey(1) & 0xFF == ord('q'):\n                        break\n\n            sleep(control_data[1])\n\n    except KeyboardInterrupt:\n    \n        input_0.release()\n        enable_wire.release()",
+                "params": [],
+                "ports": {
+                  "in": [
+                    {
+                      "name": "Inp-0"
+                    }
+                  ]
+                }
+              },
+              "position": {
+                "x": 50,
+                "y": 100
+              },
+              "size": {
+                "width": 800,
+                "height": 600
+              }
+            },
+            {
+              "id": "400",
+              "type": "basic.constant",
+              "data": {
+                "name": "Frequency",
+                "value": "30.0",
+                "local": true
+              },
+              "position": {
+                "x": 400,
+                "y": 10
+              }
+            }
+          ],
+          "wires": [
+            {
+              "source": {
+                "block": "100",
+                "port": "in"
+              },
+              "target": {
+                "block": "",
+                "port": ""
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
