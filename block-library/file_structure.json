@@ -1,0 +1,93 @@
+{
+    "Create": {
+        "label": "Create",
+        "children": {
+            "BasicIO": {
+                "label": "BasicIO"
+            },
+            "BasicInput": {
+                "label": "BasicInput"
+            },
+            "BasicOutput": {
+                "label": "BasicOutput"
+            }
+        }
+    },
+    "Tensorflow": {
+        "label": "Tensorflow",
+        "children": {
+            "ObjectDetector": {
+                "label": "ObjectDetector"
+            }
+        }
+    },
+    "ROS-Sensors": {
+        "label": "ROS-Sensors",
+        "children": {
+            "CameraROS": {
+                "label": "CameraROS"
+            },
+            "Odometer": {
+                "label": "Odometer"
+            }
+        }
+    },
+    "Controllers": {
+        "label": "Controllers",
+        "children": {
+            "Teleoperator": {
+                "label": "Teleoperator"
+            },
+            "MotorDriver": {
+                "label": "MotorDriver"
+            },
+            "PID": {
+                "label": "PID"
+            }
+        }
+    },
+    "OpenCV": {
+        "label": "OpenCV",
+        "children": {
+            "Screen": {
+                "label": "Screen"
+            },
+            "ColorFilter": {
+                "label": "ColorFilter"
+            },
+            "Dilation": {
+                "label": "Dilation"
+            },
+            "VideoStreamer": {
+                "label": "VideoStreamer"
+            },
+            "Camera": {
+                "label": "Camera"
+            },
+            "ContourDetector": {
+                "label": "ContourDetector"
+            },
+            "EdgeDetector": {
+                "label": "EdgeDetector"
+            },
+            "Erosion": {
+                "label": "Erosion"
+            },
+            "FaceDetector": {
+                "label": "FaceDetector"
+            },
+            "Threshold": {
+                "label": "Threshold"
+            },
+            "ImageRead": {
+                "label": "ImageRead"
+            },
+            "Blur": {
+                "label": "Blur"
+            },
+            "Cropper": {
+                "label": "Cropper"
+            }
+        }
+    }
+}
