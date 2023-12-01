@@ -1,6 +1,8 @@
 import os
 import json
 
+# To Do Update all the paths using path lib 
+
 def generate_file_structure(directory, i):
     if(i != 0):
         file_structure = {
